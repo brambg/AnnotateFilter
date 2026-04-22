@@ -1,4 +1,4 @@
-§digraph tokens {
+digraph tokens {
   graph [ fontsize=30 labelloc="t" label="" splines=true overlap=false rankdir = "LR" ];
   // A2 paper size
   size = "34.4,16.5";

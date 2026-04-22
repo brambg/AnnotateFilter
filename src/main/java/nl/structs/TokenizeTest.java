@@ -1,11 +1,7 @@
 package main.java.nl.structs;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.synonym.SynonymGraphFilter;
-import org.apache.lucene.analysis.synonym.SynonymMap;
-import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
@@ -18,17 +14,12 @@ import java.util.LinkedList;
 
 public class TokenizeTest {
   TokenizeTest() {
-    Analyzer analyzer = new StandardAnalyzer();
-    String text = "This is a test of the tokenization process";
+    var analyzer = new StandardAnalyzer();
     try {
+  
+      var text = "This is a test of the tokenization process";
+  
       var tokenStream = analyzer.tokenStream("field", text);
-
-      //var builder = new SynonymMap.Builder(true);
-      //builder.add(new CharsRef("test"), new CharsRef("exam\u0000in\u0000ation"), true); // one original, three synonym tokens
-      //builder.add(new CharsRef("a"), new CharsRef("section2"), true); // three original, one synonym token
-      //builder.add(new CharsRef("a\u0000test"), new CharsRef("section3"), true); // three original, one synonym token
-      //var synonymMap = builder.build();
-      //tokenStream = new SynonymGraphFilter(tokenStream, synonymMap, true);
 
       var annotations = new LinkedList<AnnotateFilter.Annotation>();
       
@@ -38,7 +29,7 @@ public class TokenizeTest {
       annotations.add(new AnnotateFilter.Annotation(18, 21, "concept32"));
       annotations.add(new AnnotateFilter.Annotation(18, 34, "concept5"));
       annotations.add(new AnnotateFilter.Annotation(35, 42, "concept8"));
-
+      
       tokenStream = new AnnotateFilter(tokenStream, annotations);
 
       outputDot(tokenStream);
@@ -47,8 +38,9 @@ public class TokenizeTest {
 
     } catch (Exception e) {
       e.printStackTrace();
+    } finally {
+      analyzer.close();
     }
-    analyzer.close();
   }
 
   public static void main(String[] args) {
