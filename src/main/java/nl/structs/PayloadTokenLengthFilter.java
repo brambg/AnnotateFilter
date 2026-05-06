@@ -39,7 +39,7 @@ public final class PayloadTokenLengthFilter extends TokenFilter {
   private final BytesRef encodedLength = new BytesRef(4);
 
   /**
-   * Create a PaylaodTokenLengthFilter
+   * Create a PayloadTokenLengthFilter
    */
   public PayloadTokenLengthFilter(TokenStream input) {
     super(input);
