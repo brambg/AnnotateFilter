@@ -24,8 +24,7 @@ import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.tokenattributes.*;
 import org.apache.lucene.util.*;
 
-public final class
-AnnotateFilter extends TokenFilter {
+public final class AnnotateFilter extends TokenFilter {
 
     public static final String TOKEN_TYPE = "ANNOTATION";
 
@@ -47,16 +46,7 @@ AnnotateFilter extends TokenFilter {
     private int lookaheadNextRead;
     private int lookaheadNextWrite;
 
-    public static class Annotation {
-        public final int startOffset;
-        public final int endOffset;
-        public final String annotation;
-
-        public Annotation(int startOffset, int endOffset, String annotation) {
-            this.startOffset = startOffset;
-            this.endOffset = endOffset;
-            this.annotation = annotation;
-        }
+    public record Annotation(int startOffset, int endOffset, String annotation) {
     }
 
     private final ListIterator<Annotation> annotationIterator;
@@ -207,6 +197,7 @@ AnnotateFilter extends TokenFilter {
 
         BufferedOutputToken token = outputBuffer.pollFirst();
 
+        assert token != null;
         if (token.state != null) {
             // This is an original input token (keepOrig=true case):
             restoreState(token.state);
