@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package main.java.nl.structs;
+package nl.structs;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ import org.apache.lucene.util.BytesRef;
 
 /**
  * Encodes a token's position length into its associated payload
- * Copied from https://github.com/apache/lucene-solr/pull/772/
+ * Copied from <a href="https://github.com/apache/lucene-solr/pull/772/">...</a>
  *
  * @see PayloadLengthTermIntervalsSource
  */
@@ -47,7 +47,7 @@ public final class PayloadTokenLengthFilter extends TokenFilter {
 
   @Override
   public boolean incrementToken() throws IOException {
-    if (input.incrementToken() == false) {
+    if (!input.incrementToken()) {
       return false;
     }
 
