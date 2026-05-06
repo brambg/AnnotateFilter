@@ -1,24 +1,19 @@
 package nl.structs;
 
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 
 import nl.structs.AnnotateFilter.*;
 import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.standard.*;
 import org.apache.lucene.analysis.tokenattributes.*;
-import org.apache.lucene.tests.analysis.TokenStreamToDot;
+import org.apache.lucene.tests.analysis.*;
 
-public class TokenizeTest {
+public class TokenizeTest extends junit.framework.TestCase {
 
-    public static void main(String[] args) {
-        tokenizeTest();
-    }
-
-    private static void tokenizeTest() {
+    public void testTokenizeTest() {
+        var text = "This is a test of the tokenization process";
         try (var analyzer = new StandardAnalyzer()) {
-
-            var text = "This is a test of the tokenization process";
 
             var tokenStream = analyzer.tokenStream("field", text);
 
@@ -31,9 +26,9 @@ public class TokenizeTest {
             annotations.add(new Annotation(18, 34, "concept5"));
             annotations.add(new Annotation(35, 42, "concept8"));
 
-            tokenStream = new AnnotateFilter(tokenStream, annotations);
+            var annotatedTokenStream = new AnnotateFilter(tokenStream, annotations);
 
-            outputDot(tokenStream);
+            outputDot(annotatedTokenStream);
 
 //            printTokenStream(tokenStream);
 
@@ -41,7 +36,6 @@ public class TokenizeTest {
             e.printStackTrace();
         }
     }
-
 
     private static void outputDot(TokenStream tokenStream) throws Exception {
         try (var dotWriter = new PrintWriter("graph.dot")) {

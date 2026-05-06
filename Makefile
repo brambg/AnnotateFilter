@@ -1,5 +1,5 @@
 tokenize-test:
-	mvn compile exec:java -Dexec.mainClass="nl.structs.TokenizeTest"
+	mvn test
 	$(MAKE) graph.svg
 	open graph.svg
 
