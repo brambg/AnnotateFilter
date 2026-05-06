@@ -1,7 +1,7 @@
 package nl.structs
 
 import java.io.PrintWriter
-import java.util.LinkedList
+import nl.structs.AnnotateFilter.Annotation
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
@@ -22,14 +22,15 @@ object TokenizeTest {
                 val text = "This is a test of the tokenization process"
                 var tokenStream = analyzer.tokenStream("field", text)
 
-                val annotations = LinkedList<AnnotateFilter.Annotation?>()
+                val annotations = listOf(
+                    Annotation(5, 9, "concept1"),
+                    Annotation(10, 14, "concept3"),
+                    Annotation(10, 42, "concept2"),
+                    Annotation(18, 21, "concept32"),
+                    Annotation(18, 34, "concept5"),
+                    Annotation(35, 42, "concept8")
+                )
 
-                annotations.add(AnnotateFilter.Annotation(5, 9, "concept1"))
-                annotations.add(AnnotateFilter.Annotation(10, 14, "concept3"))
-                annotations.add(AnnotateFilter.Annotation(10, 42, "concept2"))
-                annotations.add(AnnotateFilter.Annotation(18, 21, "concept32"))
-                annotations.add(AnnotateFilter.Annotation(18, 34, "concept5"))
-                annotations.add(AnnotateFilter.Annotation(35, 42, "concept8"))
 
                 tokenStream = AnnotateFilter(tokenStream, annotations)
                 outputDot(tokenStream)
@@ -48,18 +49,18 @@ object TokenizeTest {
 
     @Throws(Exception::class)
     private fun printTokenStream(tokenStream: TokenStream) {
-        val offsetAttribute = tokenStream.getAttribute<OffsetAttribute>(OffsetAttribute::class.java)
+        val offsetAttribute = tokenStream.getAttribute(OffsetAttribute::class.java)
         val positionIncrementAttribute =
-            tokenStream.getAttribute<PositionIncrementAttribute>(PositionIncrementAttribute::class.java)
+            tokenStream.getAttribute(PositionIncrementAttribute::class.java)
         val positionLengthAttribute =
-            tokenStream.getAttribute<PositionLengthAttribute>(PositionLengthAttribute::class.java)
-        val termAttribute = tokenStream.getAttribute<CharTermAttribute>(CharTermAttribute::class.java)
+            tokenStream.getAttribute(PositionLengthAttribute::class.java)
+        val termAttribute = tokenStream.getAttribute(CharTermAttribute::class.java)
 
         tokenStream.reset()
         while (tokenStream.incrementToken()) {
             println(termAttribute.toString())
-            println("position increment: " + positionIncrementAttribute.getPositionIncrement())
-            println("position length: " + positionLengthAttribute.getPositionLength())
+            println("position increment: " + positionIncrementAttribute.positionIncrement)
+            println("position length: " + positionLengthAttribute.positionLength)
             println("offset: " + offsetAttribute.startOffset() + "-" + offsetAttribute.endOffset())
             println()
         }

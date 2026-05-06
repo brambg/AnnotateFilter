@@ -32,15 +32,12 @@ import org.apache.lucene.util.CharsRefBuilder
 import org.apache.lucene.util.RollingBuffer
 import org.apache.lucene.util.RollingBuffer.Resettable
 
-class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) : TokenFilter(input) {
-    private val termAtt: CharTermAttribute = addAttribute<CharTermAttribute>(CharTermAttribute::class.java)
-    private val posIncrAtt: PositionIncrementAttribute =
-        addAttribute<PositionIncrementAttribute>(PositionIncrementAttribute::class.java)
-    private val posLenAtt: PositionLengthAttribute =
-        addAttribute<PositionLengthAttribute>(PositionLengthAttribute::class.java)
-    private val typeAtt: TypeAttribute = addAttribute<TypeAttribute>(TypeAttribute::class.java)
-    private val offsetAtt: OffsetAttribute = addAttribute<OffsetAttribute>(OffsetAttribute::class.java)
-
+class AnnotateFilter(input: TokenStream, annotations: List<Annotation>) : TokenFilter(input) {
+    private val termAtt: CharTermAttribute = addAttribute(CharTermAttribute::class.java)
+    private val posIncrAtt: PositionIncrementAttribute = addAttribute(PositionIncrementAttribute::class.java)
+    private val posLenAtt: PositionLengthAttribute = addAttribute(PositionLengthAttribute::class.java)
+    private val typeAtt: TypeAttribute = addAttribute(TypeAttribute::class.java)
+    private val offsetAtt: OffsetAttribute = addAttribute(OffsetAttribute::class.java)
     private val outputBuffer = LinkedList<BufferedOutputToken>()
 
     private var maxLookaheadUsed = 0
@@ -53,10 +50,9 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
     private var lookaheadNextRead = 0
     private var lookaheadNextWrite = 0
 
-    @JvmRecord
-    data class Annotation(val startOffset: Int, val endOffset: Int, val annotation: String?)
+    data class Annotation(val startOffset: Int, val endOffset: Int, val annotation: String)
 
-    private val annotationIterator: MutableListIterator<Annotation?>
+    private val annotationIterator: MutableListIterator<Annotation> = annotations.listIterator() as MutableListIterator<Annotation>
     private var currentAnnotation: Annotation? = null
 
     private val lookahead: RollingBuffer<BufferedInputToken> = object : RollingBuffer<BufferedInputToken>() {
@@ -127,13 +123,6 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
         }
     }
 
-    init {
-        this.annotationIterator = annotations.listIterator()
-
-        // We assume the annotationlist is ordered on the start offset
-        // Add a sort option
-    }
-
     @Throws(IOException::class)
     override fun incrementToken(): Boolean {
         if (!outputBuffer.isEmpty()) {
@@ -176,9 +165,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
             // We still have buffered lookahead tokens from a previous
             // parse attempt that required lookahead; just replay them now:
             // System.out.println(" restore buffer");
-            assert(
-                lookaheadNextRead < lookaheadNextWrite
-            ) { "read=" + lookaheadNextRead + " write=" + lookaheadNextWrite }
+            assert(lookaheadNextRead < lookaheadNextWrite) { "read=$lookaheadNextRead write=$lookaheadNextWrite" }
             val token = lookahead.get(lookaheadNextRead)
             lookaheadNextRead++
 
@@ -217,15 +204,15 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
             // System.out.println(" startOffset=" + matchStartOffset + " endOffset=" +
             // matchEndOffset);
             typeAtt.setType(TOKEN_TYPE)
-            posIncrAtt.setPositionIncrement(token.posIncrement)
-            posLenAtt.setPositionLength(token.endPos - token.startPos) // TODO check
+            posIncrAtt.positionIncrement = token.posIncrement
+            posLenAtt.positionLength = token.endPos - token.startPos // TODO check
             // System.out.println(" release token " + token.term + " posIncr=" + token.posIncrement + " posLen=" + (token.endPos - token.startPos));
         }
     }
 
     /**
-     * Scans the next input token(s) to see if a synonym matches. Returns true if a
-     * match was found.
+     * Scans the next input token(s) to see if a synonym matches. Returns true
+     * if a match was found.
      */
     @Throws(IOException::class)
     private fun parse(): Boolean {
@@ -251,7 +238,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
             val inputEndOffset: Int
             val inputStartOffset: Int
 
-            if (lookaheadUpto <= lookahead.getMaxPos()) {
+            if (lookaheadUpto <= lookahead.maxPos) {
                 // Still in our lookahead buffer
                 val token = lookahead.get(lookaheadUpto)
                 lookaheadUpto++
@@ -303,7 +290,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
                 // System.out.println(currentAnnotation.annotation);
             }
 
-            if (currentAnnotation!!.startOffset >= inputStartOffset && currentAnnotation!!.startOffset <= inputEndOffset) {
+            if (currentAnnotation!!.startOffset in inputStartOffset..inputEndOffset) {
                 // System.out.println("match");
 
                 matches.add(
@@ -399,9 +386,9 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
     }
 
     /**
-     * Expands the output graph into the necessary tokens, adding synonyms as side
-     * paths parallel to
-     * the input tokens, and buffers them in the output token buffer.
+     * Expands the output graph into the necessary tokens, adding synonyms as
+     * side paths parallel to the input tokens, and buffers them in the output
+     * token buffer.
      */
     private fun bufferOutputTokens(matches: LinkedList<BufferedOutputToken>, matchLength: Int) {
         // We have a list of matches and the tokens that where needed for these matches.
@@ -409,7 +396,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
 
         // Group the matches by their start position
 
-        val uniqueStartPositions: SortedSet<Int> = TreeSet<Int>()
+        val uniqueStartPositions: SortedSet<Int> = TreeSet()
 
         for (token in matches) uniqueStartPositions.add(token.startPos)
 
@@ -467,9 +454,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
         // lookahead.getMaxPos());
     }
 
-    /**
-     * Buffers the current input token into lookahead buffer.
-     */
+    /** Buffers the current input token into lookahead buffer. */
     private fun capture() {
         assert(liveToken)
         liveToken = false
@@ -482,7 +467,7 @@ class AnnotateFilter(input: TokenStream, annotations: LinkedList<Annotation?>) :
         assert(token.term.length() == 0)
         token.term.append(termAtt)
 
-        maxLookaheadUsed = max(maxLookaheadUsed, lookahead.getBufferSize())
+        maxLookaheadUsed = max(maxLookaheadUsed, lookahead.bufferSize)
         // System.out.println(" maxLookaheadUsed=" + maxLookaheadUsed);
     }
 

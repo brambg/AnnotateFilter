@@ -34,9 +34,9 @@ class PayloadTokenLengthFilter
  * Create a PayloadTokenLengthFilter
  */
     (input: TokenStream) : TokenFilter(input) {
-    private val payloadAttribute: PayloadAttribute = addAttribute<PayloadAttribute>(PayloadAttribute::class.java)
+    private val payloadAttribute: PayloadAttribute = addAttribute(PayloadAttribute::class.java)
     private val lengthAttribute: PositionLengthAttribute =
-        addAttribute<PositionLengthAttribute>(PositionLengthAttribute::class.java)
+        addAttribute(PositionLengthAttribute::class.java)
 
     private val encodedLength = BytesRef(4)
 
@@ -46,10 +46,10 @@ class PayloadTokenLengthFilter
             return false
         }
 
-        if (lengthAttribute.getPositionLength() > 1) {
-            encodeLength(lengthAttribute.getPositionLength())
-            println(lengthAttribute.getPositionLength())
-            payloadAttribute.setPayload(encodedLength)
+        if (lengthAttribute.positionLength > 1) {
+            encodeLength(lengthAttribute.positionLength)
+            println(lengthAttribute.positionLength)
+            payloadAttribute.payload = encodedLength
         }
 
         return true
