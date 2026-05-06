@@ -1,70 +1,69 @@
-package nl.structs;
+package nl.structs
 
-import java.io.PrintWriter;
-import java.util.*;
+import java.io.PrintWriter
+import java.util.LinkedList
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.standard.StandardAnalyzer
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute
+import org.apache.lucene.tests.analysis.TokenStreamToDot
 
-import nl.structs.AnnotateFilter.*;
-import org.apache.lucene.analysis.*;
-import org.apache.lucene.analysis.standard.*;
-import org.apache.lucene.analysis.tokenattributes.*;
-import org.apache.lucene.tests.analysis.TokenStreamToDot;
-
-public class TokenizeTest {
-
-    public static void main(String[] args) {
-        tokenizeTest();
+object TokenizeTest {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        tokenizeTest()
     }
 
-    private static void tokenizeTest() {
-        try (var analyzer = new StandardAnalyzer()) {
+    private fun tokenizeTest() {
+        try {
+            StandardAnalyzer().use { analyzer ->
+                val text = "This is a test of the tokenization process"
+                var tokenStream = analyzer.tokenStream("field", text)
 
-            var text = "This is a test of the tokenization process";
+                val annotations = LinkedList<AnnotateFilter.Annotation?>()
 
-            var tokenStream = analyzer.tokenStream("field", text);
+                annotations.add(AnnotateFilter.Annotation(5, 9, "concept1"))
+                annotations.add(AnnotateFilter.Annotation(10, 14, "concept3"))
+                annotations.add(AnnotateFilter.Annotation(10, 42, "concept2"))
+                annotations.add(AnnotateFilter.Annotation(18, 21, "concept32"))
+                annotations.add(AnnotateFilter.Annotation(18, 34, "concept5"))
+                annotations.add(AnnotateFilter.Annotation(35, 42, "concept8"))
 
-            var annotations = new LinkedList<Annotation>();
-
-            annotations.add(new Annotation(5, 9, "concept1"));
-            annotations.add(new Annotation(10, 14, "concept3"));
-            annotations.add(new Annotation(10, 42, "concept2"));
-            annotations.add(new Annotation(18, 21, "concept32"));
-            annotations.add(new Annotation(18, 34, "concept5"));
-            annotations.add(new Annotation(35, 42, "concept8"));
-
-            tokenStream = new AnnotateFilter(tokenStream, annotations);
-
-            outputDot(tokenStream);
-
-//            printTokenStream(tokenStream);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+                tokenStream = AnnotateFilter(tokenStream, annotations)
+                outputDot(tokenStream)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-
-    private static void outputDot(TokenStream tokenStream) throws Exception {
-        try (var dotWriter = new PrintWriter("graph.dot")) {
-            new TokenStreamToDot(null, tokenStream, dotWriter).toDot();
+    @Throws(Exception::class)
+    private fun outputDot(tokenStream: TokenStream) {
+        PrintWriter("graph.dot").use { dotWriter ->
+            TokenStreamToDot(null, tokenStream, dotWriter).toDot()
         }
     }
 
-    private static void printTokenStream(TokenStream tokenStream) throws Exception {
-        var offsetAttribute = tokenStream.getAttribute(OffsetAttribute.class);
-        var positionIncrementAttribute = tokenStream.getAttribute(PositionIncrementAttribute.class);
-        var positionLengthAttribute = tokenStream.getAttribute(PositionLengthAttribute.class);
-        var termAttribute = tokenStream.getAttribute(CharTermAttribute.class);
+    @Throws(Exception::class)
+    private fun printTokenStream(tokenStream: TokenStream) {
+        val offsetAttribute = tokenStream.getAttribute<OffsetAttribute>(OffsetAttribute::class.java)
+        val positionIncrementAttribute =
+            tokenStream.getAttribute<PositionIncrementAttribute>(PositionIncrementAttribute::class.java)
+        val positionLengthAttribute =
+            tokenStream.getAttribute<PositionLengthAttribute>(PositionLengthAttribute::class.java)
+        val termAttribute = tokenStream.getAttribute<CharTermAttribute>(CharTermAttribute::class.java)
 
-        tokenStream.reset();
+        tokenStream.reset()
         while (tokenStream.incrementToken()) {
-            System.out.println(termAttribute.toString());
-            System.out.println("position increment: " + positionIncrementAttribute.getPositionIncrement());
-            System.out.println("position length: " + positionLengthAttribute.getPositionLength());
-            System.out.println("offset: " + offsetAttribute.startOffset() + "-" + offsetAttribute.endOffset());
-            System.out.println();
+            println(termAttribute.toString())
+            println("position increment: " + positionIncrementAttribute.getPositionIncrement())
+            println("position length: " + positionLengthAttribute.getPositionLength())
+            println("offset: " + offsetAttribute.startOffset() + "-" + offsetAttribute.endOffset())
+            println()
         }
-        tokenStream.end();
-        tokenStream.close();
+        tokenStream.end()
+        tokenStream.close()
     }
-
 }

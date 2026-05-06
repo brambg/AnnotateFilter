@@ -14,60 +14,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nl.structs
 
-package nl.structs;
-
-import java.io.IOException;
-
-import org.apache.lucene.analysis.TokenFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
-import org.apache.lucene.util.BytesRef;
+import java.io.IOException
+import org.apache.lucene.analysis.TokenFilter
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute
+import org.apache.lucene.util.BytesRef
 
 /**
  * Encodes a token's position length into its associated payload
- * Copied from <a href="https://github.com/apache/lucene-solr/pull/772/">...</a>
- *
+ * Copied from [...](https://github.com/apache/lucene-solr/pull/772/)
+ * 
  * @see PayloadLengthTermIntervalsSource
  */
-public final class PayloadTokenLengthFilter extends TokenFilter {
+class PayloadTokenLengthFilter
+/**
+ * Create a PayloadTokenLengthFilter
+ */
+    (input: TokenStream) : TokenFilter(input) {
+    private val payloadAttribute: PayloadAttribute = addAttribute<PayloadAttribute>(PayloadAttribute::class.java)
+    private val lengthAttribute: PositionLengthAttribute =
+        addAttribute<PositionLengthAttribute>(PositionLengthAttribute::class.java)
 
-  private final PayloadAttribute payloadAttribute = addAttribute(PayloadAttribute.class);
-  private final PositionLengthAttribute lengthAttribute = addAttribute(PositionLengthAttribute.class);
+    private val encodedLength = BytesRef(4)
 
-  private final BytesRef encodedLength = new BytesRef(4);
+    @Throws(IOException::class)
+    override fun incrementToken(): Boolean {
+        if (!input.incrementToken()) {
+            return false
+        }
 
-  /**
-   * Create a PayloadTokenLengthFilter
-   */
-  public PayloadTokenLengthFilter(TokenStream input) {
-    super(input);
-  }
+        if (lengthAttribute.getPositionLength() > 1) {
+            encodeLength(lengthAttribute.getPositionLength())
+            println(lengthAttribute.getPositionLength())
+            payloadAttribute.setPayload(encodedLength)
+        }
 
-  @Override
-  public boolean incrementToken() throws IOException {
-    if (!input.incrementToken()) {
-      return false;
+        return true
     }
 
-    if (lengthAttribute.getPositionLength() > 1) {
-      encodeLength(lengthAttribute.getPositionLength());
-      System.out.println(lengthAttribute.getPositionLength());
-      payloadAttribute.setPayload(encodedLength);
+    private fun encodeLength(positionLength: Int) {
+        var positionLength = positionLength
+        val numBitsRequired = 32 - Integer.numberOfLeadingZeros(positionLength)
+        val numBytesRequired = (numBitsRequired + 7) / 8
+        encodedLength.length = numBytesRequired
+        for (index in numBytesRequired - 1 downTo 0) {
+            encodedLength.bytes[index] = positionLength.toByte()
+            positionLength = positionLength ushr 8
+        }
+        assert(positionLength == 0)
     }
-
-    return true;
-  }
-
-  private void encodeLength(int positionLength) {
-    int numBitsRequired = 32 - Integer.numberOfLeadingZeros(positionLength);
-    int numBytesRequired = (numBitsRequired + 7) / 8;
-    encodedLength.length = numBytesRequired;
-    for (int index = numBytesRequired - 1; index >= 0; index--) {
-      encodedLength.bytes[index] = (byte) positionLength;
-      positionLength >>>= 8;
-    }
-    assert positionLength == 0;
-  }
 }
