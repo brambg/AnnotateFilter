@@ -2,9 +2,9 @@
 
 As Mike Mccandles describes in his <a href="https://blog.mikemccandless.com/2012/04/lucenes-tokenstreams-are-actually.html">blog</a>: Lucene TokenStreams are actually graphs!
 
-Inspired by this, we present AnnotateFilter, a TokenFilter that makes it possible to add annotation to a TokenStream. By annotations we mean terms that have a start and end offset in the text that was the source of the TokenStream.
+Inspired by this, we present AnnotateFilter, a TokenFilter that makes it possible to add annotations to a TokenStream. By annotations we mean terms that have a start and end offset in the text that was the source of the TokenStream.
 
-For instance, if have "concept1" at characters 5 to 9 in the original text, we can add the term "concept1" in the TokenStream. The term is added to the normally linear TokenStream, making it a graph. A directed graph actually. Because "concept1" is simply a term, we can search for it just as we search for other terms.
+For instance, if we have "concept1" at characters 5 to 9 in the original text, we can add the term "concept1" in the TokenStream. The term is added to the normally linear TokenStream, making it a graph. A directed graph actually. Because "concept1" is simply a term, we can search for it just as we search for other terms.
 
 The following TokenStream consists of the text "This is a test of the tokenization process" and annotations:
 
@@ -17,7 +17,7 @@ The following TokenStream consists of the text "This is a test of the tokenizati
 
 <img src="./graph.svg">
 
-The annotations carry the from and to offset in the original text. The only thing the AnnotateFilter does is matching these ofsets with a given TokenStream: given a list of annotations and a TokenStream, the annotations are matched and added to the TokenStream.
+The annotations carry the from and to offset in the original text. The only thing the AnnotateFilter does is matching these offsets with a given TokenStream: given a list of annotations and a TokenStream, the annotations are matched and added to the TokenStream.
 
 ## How does the filter work?
 
@@ -40,4 +40,4 @@ The TokenFilter is an iterator: a token is pulled by an upstream process and the
 
 ## test command
 
-mvn clean compile exec:java -Dexec.mainClass="main.java.nl.structs.TokenizeTest"
+mvn clean compile exec:java -Dexec.mainClass="nl.structs.TokenizeTest"
