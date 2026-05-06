@@ -1,6 +1,7 @@
 package nl.structs;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 import nl.structs.AnnotateFilter.*;
@@ -19,7 +20,7 @@ public class TokenizeTest extends junit.framework.TestCase {
 
             var annotations = new LinkedList<Annotation>();
 
-            annotations.add(new Annotation(5, 9, "concept1"));
+            annotations.add(new Annotation(5, 9, "concept2"));
             annotations.add(new Annotation(10, 14, "concept3"));
             annotations.add(new Annotation(10, 42, "concept2"));
             annotations.add(new Annotation(18, 21, "concept32"));
@@ -30,11 +31,21 @@ public class TokenizeTest extends junit.framework.TestCase {
 
             outputDot(annotatedTokenStream);
 
+            assertExpectedOutput("graph.dot", "src/test/resources/graph.dot");
+
 //            printTokenStream(tokenStream);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void assertExpectedOutput(String first, String second) throws IOException {
+        long mismatch = Files.mismatch(Paths.get(first), Paths.get(second));
+        if (mismatch > 0) {
+            throw new IOException("mismatch found: generated output " + first + " does not match expected output from " + second);
+        }
+        assertEquals(-1, mismatch);
     }
 
     private static void outputDot(TokenStream tokenStream) throws Exception {
