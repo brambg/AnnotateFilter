@@ -16,55 +16,52 @@ object TokenizeTest {
         tokenizeTest()
     }
 
-    private fun tokenizeTest() {
-        try {
-            StandardAnalyzer().use { analyzer ->
-                val text = "This is a test of the tokenization process"
-                var tokenStream = analyzer.tokenStream("field", text)
+    private fun tokenizeTest() = try {
+        StandardAnalyzer().use { analyzer ->
+            val text = "This is a test of the tokenization process"
+            val tokenStream = analyzer.tokenStream("field", text)
 
-                val annotations = listOf(
-                    Annotation(5, 9, "concept1"),
-                    Annotation(10, 14, "concept3"),
-                    Annotation(10, 42, "concept2"),
-                    Annotation(18, 21, "concept32"),
-                    Annotation(18, 34, "concept5"),
-                    Annotation(35, 42, "concept8")
-                )
+            val annotations = listOf(
+                Annotation(5, 9, "concept1"),
+                Annotation(10, 14, "concept3"),
+                Annotation(10, 42, "concept2"),
+                Annotation(18, 21, "concept32"),
+                Annotation(18, 34, "concept5"),
+                Annotation(35, 42, "concept8")
+            )
 
-
-                tokenStream = AnnotateFilter(tokenStream, annotations)
-                outputDot(tokenStream)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+//            AnnotateFilter(tokenStream, annotations).outputDot()
+            AnnotateFilter(tokenStream, annotations).print()
         }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 
     @Throws(Exception::class)
-    private fun outputDot(tokenStream: TokenStream) {
+    private fun TokenStream.outputDot() {
         PrintWriter("graph.dot").use { dotWriter ->
-            TokenStreamToDot(null, tokenStream, dotWriter).toDot()
+            TokenStreamToDot(null, this, dotWriter).toDot()
         }
     }
 
     @Throws(Exception::class)
-    private fun printTokenStream(tokenStream: TokenStream) {
-        val offsetAttribute = tokenStream.getAttribute(OffsetAttribute::class.java)
+    private fun TokenStream.print() {
+        val offsetAttribute = getAttribute(OffsetAttribute::class.java)
         val positionIncrementAttribute =
-            tokenStream.getAttribute(PositionIncrementAttribute::class.java)
+            getAttribute(PositionIncrementAttribute::class.java)
         val positionLengthAttribute =
-            tokenStream.getAttribute(PositionLengthAttribute::class.java)
-        val termAttribute = tokenStream.getAttribute(CharTermAttribute::class.java)
+            getAttribute(PositionLengthAttribute::class.java)
+        val termAttribute = getAttribute(CharTermAttribute::class.java)
 
-        tokenStream.reset()
-        while (tokenStream.incrementToken()) {
+        reset()
+        while (incrementToken()) {
             println(termAttribute.toString())
             println("position increment: " + positionIncrementAttribute.positionIncrement)
             println("position length: " + positionLengthAttribute.positionLength)
             println("offset: " + offsetAttribute.startOffset() + "-" + offsetAttribute.endOffset())
             println()
         }
-        tokenStream.end()
-        tokenStream.close()
+        end()
+        close()
     }
 }
