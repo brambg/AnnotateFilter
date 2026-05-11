@@ -8,19 +8,24 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
 
 import org.apache.lucene.tests.analysis.TokenStreamToDot;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.File;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 
 public class TokenizeTest {
   TokenizeTest() {
     var analyzer = new StandardAnalyzer();
     try {
-  
-      var text = "This is a test of the tokenization process";
-  
-      var tokenStream = analyzer.tokenStream("field", text);
 
+      /*
+  
+      var tokenStream = analyzer.tokenStream("field", "This is a test of the tokenization process");
+      
       var annotations = new LinkedList<AnnotateFilter.Annotation>();
       
       annotations.add(new AnnotateFilter.Annotation(5, 9, "concept1"));
@@ -29,12 +34,41 @@ public class TokenizeTest {
       annotations.add(new AnnotateFilter.Annotation(18, 21, "concept32"));
       annotations.add(new AnnotateFilter.Annotation(18, 34, "concept5"));
       annotations.add(new AnnotateFilter.Annotation(35, 42, "concept8"));
+    
+      tokenStream = new AnnotateFilter(tokenStream, annotations);
+      outputDot(tokenStream);
+      */
+
+
+      var mapper = new ObjectMapper();
+
+      System.out.println("Loading annotations");
+
+      var tags = mapper.readTree(new File("./testdata/3598/entity-tags.json"));
+      var annotations = new LinkedList<AnnotateFilter.Annotation>();
       
+      for (var tag : tags) {
+        var start = tag.get("start_in_doc").asInt();
+        var end = tag.get("end_in_doc").asInt();
+        var concept = tag.get("tag").asText();
+        annotations.add(new AnnotateFilter.Annotation(start, end, concept));
+      }
+
+      System.out.println("Loaded " + annotations.size() + " annotations");
+
+      System.out.println("Reading file");
+      var text = Files.readString(Paths.get("./testdata/3598/document.txt"));
+
+      System.out.println("Tokenizing, annotating and outputting");
+      var tokenStream = analyzer.tokenStream("field", text);
       tokenStream = new AnnotateFilter(tokenStream, annotations);
 
-      outputDot(tokenStream);
+      printTokenStream(tokenStream);
+      
+      //outputDot(tokenStream);
+      System.out.println("Done");
 
-      //printTokenStream(tokenStream);
+
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -54,21 +88,26 @@ public class TokenizeTest {
   }
 
   private static void printTokenStream(TokenStream tokenStream) throws Exception {
+
+    var writer = new PrintWriter("tokens.txt");
+
     var offsetAttribute = tokenStream.getAttribute(OffsetAttribute.class);
     var positionIncrementAttribute = tokenStream.getAttribute(PositionIncrementAttribute.class);
     var positionLengthAttribute = tokenStream.getAttribute(PositionLengthAttribute.class);
     var termAttribute = tokenStream.getAttribute(CharTermAttribute.class);
 
     tokenStream.reset();
+
     while (tokenStream.incrementToken()) {
-      System.out.println(termAttribute.toString());
-      System.out.println("position increment: " + positionIncrementAttribute.getPositionIncrement());
-      System.out.println("position length: " + positionLengthAttribute.getPositionLength());
-      System.out.println("offset: " + offsetAttribute.startOffset() + "-" + offsetAttribute.endOffset());
-      System.out.println("");
+      var string =  offsetAttribute.startOffset() + "\t" + 
+                    offsetAttribute.endOffset() + "\t" +
+                    termAttribute.toString() + "\t" +
+                    positionIncrementAttribute.getPositionIncrement() + "\t" +
+                    positionLengthAttribute.getPositionLength();
+      writer.println(string);
     }
+    writer.close();
     tokenStream.end();
     tokenStream.close();
   }
-
 }
