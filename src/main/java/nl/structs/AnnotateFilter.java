@@ -122,8 +122,13 @@ public final class AnnotateFilter extends TokenFilter {
 
         this.annotationIterator = annotations.listIterator();
 
+    if (this.annotationIterator.hasNext()) {
+      this.currentAnnotation = this.annotationIterator.next();
+    }
+
+    // TODO We assume there are annotations. If there is no current token; shortcut the incrementToken
         // We assume the annotationlist is ordered on the start offset
-        // Add a sort option
+    // TODO Add a sort option
 
     }
 
@@ -232,6 +237,7 @@ public final class AnnotateFilter extends TokenFilter {
         // How many tokens in the current match
         int matchLength = 0;
         boolean doFinalCapture = false;
+    boolean preTokenMatch = false; // a flag that indicates a match that starts between tokens
 
         int lookaheadUpto = lookaheadNextRead;
 
@@ -289,28 +295,44 @@ public final class AnnotateFilter extends TokenFilter {
             // System.out.println(" cycle term=" + new String(buffer, 0, bufferLen));
 
             // Check if there is a match after reading the token
-            // 1: Are there annotations starting at this token?
 
-            // If so, add new match to the partialMatches list with:
-            // - posIncrement 0. We want to be able to add more than one annotation starting here. the increment is left to the original token. Check this behaviour
-            // - startOffset and endOffset are used directly from the annotation. They are simply pointers into the original text.
+      // There is a currentAnnotation set in the constructor of AnnotateFilter
+      // If this is null, the list is exhausted
+
+      if (currentAnnotation != null) {
+        do {
+          if (currentAnnotation.startOffset <= inputEndOffset) {
+            // the annotation starts before the end of the token
+            // TODO is this check sufficient?
+
+            // Add new match to the partialMatches list with:
+            // - posIncrement 0. We want to be able to add more than one annotation starting here. the increment is left to the original token
+            //   TODO Check this behaviour!
+            // - startOffset and endOffset are used from the annotation. They are pointers into the original text.
             // - endpos is now set to 0, but we dont know if this is the final value. That's why it's partial.
 
-            if (currentAnnotation == null) {
-                currentAnnotation = annotationIterator.next();
-                // System.out.println(currentAnnotation.annotation);
+            var posIncrement = 0;
+            var startPos = matchLength - 1;
+            var endPos = 0;
+
+            // If we are considering the first match of a set of matches:
+            // check if the annotation starts before the start of the token
+            // This implies that the token should not be outputted before the annotation in the resulting TokenStream
+
+            if (matches.isEmpty() && currentAnnotation.startOffset < inputStartOffset) {
+              // the annotation starts before the start of the token. It has a posincrement
+              preTokenMatch = true;
+              posIncrement = 1;
             }
 
-            if (currentAnnotation.startOffset >= inputStartOffset && currentAnnotation.startOffset <= inputEndOffset) {
-
-                // System.out.println("match");
                 matches.add(
                         new nl.structs.AnnotateFilter.BufferedOutputToken(currentAnnotation.annotation, matchLength - 1, 0, currentAnnotation.startOffset, currentAnnotation.endOffset, 0, true)
+              new BufferedOutputToken(currentAnnotation.annotation, startPos,endPos, currentAnnotation.startOffset, currentAnnotation.endOffset,posIncrement, true)
                 );
 
-                // see if there are other annotations starting at the same token:
+            // set the next annotation. For this token or the next
 
-                while (annotationIterator.hasNext()) {
+            if (annotationIterator.hasNext()) {
                     currentAnnotation = annotationIterator.next();
                     // System.out.println(currentAnnotation.annotation);
 
@@ -325,11 +347,16 @@ public final class AnnotateFilter extends TokenFilter {
                         matches.add(
                                 new nl.structs.AnnotateFilter.BufferedOutputToken(currentAnnotation.annotation, matchLength - 1, 0, currentAnnotation.startOffset, currentAnnotation.endOffset, 0, true)
                         );
+            } else {
+              currentAnnotation = null;
                     }
                 }
+
+        // stop if there are no more annotations or if the start of the new current annotation is beyond the end of current token
+        } while (currentAnnotation != null && currentAnnotation.startOffset <= inputEndOffset);
             }
 
-            // 2: Check the partialMatches if the current token is the end of any of them
+      // Check the partialMatches if the current token is the end of any of them
             // If so, add the matchLength of the partial match
             // If the there are no partialMatches: all matching is done at the
             // current input position. break the while loop
@@ -376,7 +403,7 @@ public final class AnnotateFilter extends TokenFilter {
                 capture();
             }
 
-            bufferOutputTokens(matches, matchLength);
+      bufferOutputTokens(matches, matchLength, preTokenMatch);
 
             return true;
         } else {
@@ -390,7 +417,7 @@ public final class AnnotateFilter extends TokenFilter {
      * paths parallel to
      * the input tokens, and buffers them in the output token buffer.
      */
-    private void bufferOutputTokens(LinkedList<BufferedOutputToken> matches, int matchLength) {
+  private void bufferOutputTokens(LinkedList<BufferedOutputToken> matches, int matchLength, boolean pretokenMatch) {
 
         // We have a list of matches and the tokens that where needed for these matches.
         // We know there is a start of a match at the current position
@@ -398,12 +425,17 @@ public final class AnnotateFilter extends TokenFilter {
         // Group the matches by their start position
         SortedSet<Integer> uniqueStartPositions = new TreeSet<>();
 
+    SortedSet<Integer> uniqueStartPositions = new TreeSet<Integer>();
         for (BufferedOutputToken token : matches)
             uniqueStartPositions.add(token.startPos);
 
         // First, output the token that started the match
-        outputBuffer.add(new nl.structs.AnnotateFilter.BufferedOutputToken(lookahead.get(lookaheadNextRead).state));
+        // do not output the token if this is a pre-token match, starting between tokens
+
+    if (! pretokenMatch) {
+      outputBuffer.add(new nl.structs.AnnotateFilter.BufferedOutputToken(lookahead.get(lookaheadNextRead).state));
         lookaheadNextRead++;
+    }
 
         // then, iterate the grouped startpositions
         var posIterator = uniqueStartPositions.iterator();
@@ -416,7 +448,6 @@ public final class AnnotateFilter extends TokenFilter {
             if (previousPosition > -1) {
 
                 int gap = startPos - previousPosition;
-
                 for (int j = 0; j < gap; j++) {
                     outputBuffer.add(new nl.structs.AnnotateFilter.BufferedOutputToken(lookahead.get(lookaheadNextRead).state));
                     lookaheadNextRead++;
@@ -455,7 +486,6 @@ public final class AnnotateFilter extends TokenFilter {
         // System.out.println(" match; set lookaheadNextRead=" + lookaheadNextRead + "
         // now max=" +
         // lookahead.getMaxPos());
-
     }
 
     /**
